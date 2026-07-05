@@ -1,6 +1,6 @@
 # MusiCafé Manager
 
-Sistema web para administrar una cafetería con Firebase Hosting + Cloud Firestore.
+Sistema web para administrar una cafetería, publicado con GitHub Pages y conectado a la base de datos de MusiCafé.
 
 Esta versión reemplaza la idea anterior de Ferma y deja la app preparada como **MusiCafé**. No depende de Google Sheets ni de Apps Script: productos, clientes, ventas, gastos, configuración, movimientos de inventario y borrador del carrito se guardan en Firestore.
 
@@ -19,7 +19,8 @@ Esta versión reemplaza la idea anterior de Ferma y deja la app preparada como *
 - Importación desde JSON.
 - Configuración en `settings/cafe`.
 - Login con Google y reglas de seguridad por correos autorizados.
-- Firebase Hosting listo con `firebase.json` y `.firebaserc`.
+- GitHub Pages listo para publicar directamente desde la raíz de `main`.
+- Configuración alternativa de alojamiento incluida en `firebase.json`.
 
 ## Estructura de Firestore
 
@@ -194,12 +195,12 @@ firebase.json                 Configuración de Hosting y Firestore
 .firebaserc                   Proyecto Firebase por defecto
 firestore.rules               Reglas de seguridad
 firestore.indexes.json        Índices de Firestore
-public/index.html             App principal
-public/styles.css             Estilos
-public/src/app.js             Lógica completa de la app
-public/manifest.webmanifest   PWA básica
-public/sw.js                  Caché básico del shell
-public/logo.jpg               Logo heredado del ZIP original
+index.html                    App principal
+styles.css                    Estilos
+src/app.js                    Lógica completa de la app
+manifest.webmanifest          Configuración instalable
+sw.js                         Caché básico
+logo.png                      Logo de MusiCafé
 ```
 
 ## Siguientes mejoras recomendadas

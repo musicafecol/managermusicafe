@@ -1,5 +1,5 @@
-const CACHE_NAME = 'musicafe-shell-v3';
-const ASSETS = ['/', '/index.html', '/styles.css', '/src/app.js', '/logo.png', '/manifest.webmanifest'];
+const CACHE_NAME = 'musicafe-shell-v4';
+const ASSETS = ['./', './index.html', './styles.css', './src/app.js', './logo.png', './manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).catch(() => null));
@@ -22,6 +22,6 @@ self.addEventListener('fetch', (event) => {
       const copy = res.clone();
       caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => null);
       return res;
-    }).catch(() => caches.match(req).then((cached) => cached || caches.match('/index.html')))
+    }).catch(() => caches.match(req).then((cached) => cached || caches.match('./index.html')))
   );
 });
