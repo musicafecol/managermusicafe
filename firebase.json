@@ -1,11 +1,19 @@
 {
   "hosting": {
-    "public": "public",
+    "public": ".",
     "ignore": [
       "firebase.json",
+      "firestore.rules",
+      "firestore.indexes.json",
+      "README.md",
+      "MIGRACION_Y_MEJORAS.md",
+      "package.json",
+      "node_modules/**",
+      ".git/**",
+      ".agents/**",
+      ".codex/**",
       "**/.*",
       "**/node_modules/**",
-      "README.md",
       "scripts/**"
     ],
     "headers": [
