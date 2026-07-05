@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>MusiCafé Manager</title>
+  <meta name="description" content="Sistema para administrar ventas, caja, inventario, clientes, compras y gastos de MusiCafé." />
+  <meta name="theme-color" content="#6d4c41" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./logo.png" />
+  <link rel="icon" href="./logo.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="toastHost" class="toast-host" aria-live="polite"></div>
+
+  <section id="authScreen" class="auth-screen" hidden>
+    <div class="auth-card">
+      <img src="./logo.png" alt="Logo MusiCafé" class="auth-logo" onerror="this.style.display='none'" />
+      <p class="eyebrow">MusiCafé</p>
+      <h1>Administra MusiCafé desde un solo lugar.</h1>
+      <p class="muted">Ingresa con una cuenta autorizada de Musicala para operar ventas, inventario, gastos y caja diaria.</p>
+      <button id="btnLogin" class="btn primary wide" type="button">Entrar con Google</button>
+      <p class="tiny muted">Usa la cuenta de trabajo autorizada para MusiCafé.</p>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell" hidden>
+    <header class="topbar">
+      <div class="brand">
+        <button id="btnMenu" class="icon-btn mobile-only" type="button" aria-label="Abrir menú">☰</button>
+        <img src="./logo.png" alt="Logo MusiCafé" class="brand-logo" onerror="this.style.display='none'" />
+        <div>
+          <strong>MusiCafé</strong>
+          <span id="connectionLabel">Preparando todo…</span>
+        </div>
+      </div>
+
+      <label class="global-search-wrap">
+        <span class="sr-only">Buscar</span>
+        <input id="globalSearch" class="input" type="search" placeholder="Buscar productos, clientes, ventas…" />
+      </label>
+
+      <div class="top-actions">
+        <button id="btnSync" class="icon-btn" type="button" title="Actualizar información">🔄</button>
+        <button id="btnExportJson" class="icon-btn" type="button" title="Guardar copia de seguridad">⬇️</button>
+        <button id="btnLogout" class="btn ghost" type="button">Salir</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-section">
+          <span>Día a día</span>
+          <button class="nav-btn active" type="button" data-view="dashboard">🏠 Hoy</button>
+          <button class="nav-btn" type="button" data-view="pos">🧾 Caja</button>
+          <button class="nav-btn" type="button" data-view="cierre">🔒 Cierre</button>
+        </div>
+        <div class="sidebar-section">
+          <span>Productos</span>
+          <button class="nav-btn" type="button" data-view="productos">☕ Productos</button>
+          <button class="nav-btn" type="button" data-view="inventario">📦 Inventario</button>
+          <button class="nav-btn" type="button" data-view="compras">🛒 Compras</button>
+        </div>
+        <div class="sidebar-section">
+          <span>Control</span>
+          <button class="nav-btn" type="button" data-view="ventas">📈 Ventas</button>
+          <button class="nav-btn" type="button" data-view="gastos">💸 Gastos</button>
+          <button class="nav-btn" type="button" data-view="clientes">👥 Clientes</button>
+          <button class="nav-btn" type="button" data-view="reportes">📊 Reportes</button>
+        </div>
+        <div class="sidebar-section">
+          <span>Sistema</span>
+          <button class="nav-btn" type="button" data-view="config">⚙️ Ajustes</button>
+        </div>
+        <div class="sidebar-card">
+          <small>Sesión de trabajo</small>
+          <strong id="userEmail">—</strong>
+          <p id="lastUpdate" class="tiny muted">Preparando la información.</p>
+        </div>
+      </aside>
+
+      <main class="main" id="mainContent">
+        <section class="hero">
+          <div>
+            <p class="eyebrow" id="viewEyebrow">Día a día</p>
+            <h1 id="viewTitle">Hoy en MusiCafé</h1>
+            <p id="viewDescription" class="muted">Ventas, caja, inventario y pendientes del día.</p>
+          </div>
+          <div class="hero-actions">
+            <span id="todayLabel" class="pill">Hoy</span>
+            <span id="roleLabel" class="pill success">Todo listo</span>
+          </div>
+        </section>
+
+        <section class="kpi-grid" aria-label="Indicadores principales">
+          <article class="kpi-card"><span>Ventas hoy</span><strong id="kpiSalesToday">$0</strong><small id="kpiSalesTodayMeta">0 órdenes</small></article>
+          <article class="kpi-card"><span>Utilidad estimada hoy</span><strong id="kpiProfitToday">$0</strong><small>Según costo registrado</small></article>
+          <article class="kpi-card"><span>Venta promedio</span><strong id="kpiAvgTicket">$0</strong><small>Promedio por pedido cobrado</small></article>
+          <article class="kpi-card danger-soft"><span>Stock bajo</span><strong id="kpiLowStock">0</strong><small>Productos por revisar</small></article>
+        </section>
+
+        <section id="view-dashboard" class="view active">
+          <div class="daily-status">
+            <div><span>Estado de caja</span><strong id="cashStatus">Caja cerrada</strong><small id="cashStatusMeta">Abre la caja para comenzar el día.</small></div>
+            <div class="quick-actions">
+              <button id="btnOpenCashQuick" class="btn primary" type="button">Abrir caja</button>
+              <button class="btn secondary" type="button" data-go-view="pos">Ir a caja</button>
+              <button class="btn ghost" type="button" data-go-view="gastos">Registrar gasto</button>
+              <button class="btn ghost" type="button" data-go-view="compras">Registrar compra</button>
+              <button class="btn dark" type="button" data-go-view="cierre">Cerrar día</button>
+            </div>
+          </div>
+          <div class="grid two">
+            <article class="panel">
+              <div class="panel-head">
+                <div><h2>Resumen del mes</h2><p class="muted">Ingresos, gastos y utilidad bruta estimada.</p></div>
+              </div>
+              <div class="big-number"><span>Ventas del mes</span><strong id="dashMonthSales">$0</strong></div>
+              <div class="mini-grid">
+                <div><span>Gastos</span><strong id="dashMonthExpenses">$0</strong></div>
+                <div><span>Utilidad bruta</span><strong id="dashMonthProfit">$0</strong></div>
+                <div><span>Órdenes</span><strong id="dashMonthOrders">0</strong></div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div><h2>Alertas inteligentes</h2><p class="muted">Lo que toca mirar antes de que el café se vuelva drama griego.</p></div>
+              </div>
+              <div id="alertsList" class="stack"></div>
+            </article>
+          </div>
+
+          <div class="grid two">
+            <article class="panel">
+              <div class="panel-head"><h2>Productos estrella</h2></div>
+              <div id="topProducts" class="table-lite"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><h2>Últimas ventas</h2></div>
+              <div id="recentSales" class="table-lite"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="view-pos" class="view">
+          <div class="pos-layout">
+            <article class="panel products-panel">
+              <div class="panel-head">
+                <div><h2>Productos</h2><p class="muted">Toca un producto para agregarlo al pedido.</p></div>
+                <div class="row compact">
+                  <select id="posCategoryFilter" class="input small"><option value="">Todas</option></select>
+                  <button id="btnQuickProduct" class="btn secondary" type="button">+ Producto</button>
+                </div>
+              </div>
+              <div id="productsGrid" class="products-grid"></div>
+            </article>
+
+            <aside class="panel cart-panel">
+              <div class="panel-head">
+                <div><h2>Pedido actual</h2><p class="muted">El pedido queda guardado mientras terminas de atender.</p></div>
+              </div>
+
+              <div id="cartList" class="cart-list"></div>
+
+              <div class="cart-fields">
+                <div class="quick-notes" aria-label="Notas rápidas">
+                  <button type="button" data-quick-note="Sin azúcar">Sin azúcar</button>
+                  <button type="button" data-quick-note="Para llevar">Para llevar</button>
+                  <button type="button" data-quick-note="Docente">Docente</button>
+                  <button type="button" data-quick-note="Estudiante">Estudiante</button>
+                  <button type="button" data-quick-note="Cortesía">Cortesía</button>
+                  <button type="button" data-quick-note="Consumo interno">Consumo interno</button>
+                </div>
+                <label>Cliente
+                  <select id="saleCustomer" class="input"><option value="">Cliente ocasional</option></select>
+                </label>
+                <label>Método de pago
+                  <select id="salePayment" class="input">
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Mixto">Mixto</option>
+                    <option value="Cortesía">Cortesía</option>
+                  </select>
+                </label>
+                <label>Descuento
+                  <input id="saleDiscount" class="input" type="number" min="0" step="100" value="0" />
+                </label>
+                <label>Notas
+                  <textarea id="saleNotes" class="input" rows="2" placeholder="Ej: sin azúcar, mesa 2, para llevar..."></textarea>
+                </label>
+              </div>
+
+              <div class="totals">
+                <div><span>Subtotal</span><strong id="cartSubtotal">$0</strong></div>
+                <div><span>Descuento</span><strong id="cartDiscount">$0</strong></div>
+                <div class="total"><span>Total</span><strong id="cartTotal">$0</strong></div>
+              </div>
+
+              <div class="row">
+                <button id="btnClearCart" class="btn ghost" type="button">Vaciar</button>
+                <button id="btnSaveSale" class="btn primary grow checkout-btn" type="button">Cobrar</button>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="view-productos" class="view">
+          <div class="grid form-grid">
+            <article class="panel">
+              <div class="panel-head"><div><h2 id="productFormTitle">Nuevo producto</h2><p class="muted">Catálogo, precio, costo y stock.</p></div></div>
+              <form id="productForm" class="stack">
+                <input type="hidden" id="productId" />
+                <div class="grid two tight">
+                  <label>Nombre<input id="productName" class="input" required placeholder="Latte, brownie, croissant…" /></label>
+                  <label>Categoría<input id="productCategory" class="input" placeholder="Bebidas, postres, snacks…" /></label>
+                  <label>Precio<input id="productPrice" class="input" type="number" min="0" step="100" required /></label>
+                  <label>Costo<input id="productCost" class="input" type="number" min="0" step="100" /></label>
+                  <label>Stock<input id="productStock" class="input" type="number" step="1" value="0" /></label>
+                  <label>Stock mínimo<input id="productMinStock" class="input" type="number" step="1" value="5" /></label>
+                  <label>SKU<input id="productSku" class="input" placeholder="Opcional" /></label>
+                  <label>Unidad<input id="productUnit" class="input" placeholder="unidad, porción, vaso…" /></label>
+                </div>
+                <label class="check"><input id="productActive" type="checkbox" checked /> Disponible en Caja</label>
+                <label>Notas<textarea id="productNotes" class="input" rows="2" placeholder="Receta, proveedor, observaciones..."></textarea></label>
+                <div class="row">
+                  <button class="btn primary" type="submit">Guardar producto</button>
+                  <button id="btnResetProduct" class="btn ghost" type="button">Limpiar</button>
+                  <button id="btnSeedProducts" class="btn secondary" type="button">Cargar demo</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div><h2>Inventario</h2><p class="muted">Filtra, edita y ajusta stock sin abrir Sheets como si fuera 2011.</p></div>
+                <input id="productSearch" class="input small" placeholder="Buscar…" />
+              </div>
+              <div id="productsTable" class="table-lite"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="view-inventario" class="view">
+          <article class="panel">
+            <div class="panel-head">
+              <div><h2>Estado del inventario</h2><p class="muted">Controla existencias, ajustes y productos por reponer.</p></div>
+              <div class="row compact"><input id="inventorySearch" class="input small" placeholder="Buscar…" /><button class="btn secondary" type="button" data-go-view="compras">Registrar compra</button></div>
+            </div>
+            <div id="inventorySummary" class="mini-grid"></div>
+            <div id="inventoryTable" class="table-lite"></div>
+          </article>
+        </section>
+
+        <section id="view-compras" class="view">
+          <div class="grid form-grid">
+            <article class="panel">
+              <div class="panel-head"><div><h2>Registrar compra</h2><p class="muted">La compra aumenta el stock y registra el gasto automáticamente.</p></div></div>
+              <form id="purchaseForm" class="stack">
+                <div class="grid two tight">
+                  <label>Fecha<input id="purchaseDate" class="input" type="date" required /></label>
+                  <label>Proveedor<input id="purchaseSupplier" class="input" required placeholder="D1, Ara, proveedor local…" /></label>
+                  <label>Producto<select id="purchaseProduct" class="input" required><option value="">Seleccionar producto</option></select></label>
+                  <label>Cantidad<input id="purchaseQty" class="input" type="number" min="1" step="1" required /></label>
+                  <label>Costo unitario<input id="purchaseUnitCost" class="input" type="number" min="0" step="100" required /></label>
+                  <label>Método de pago<select id="purchasePayment" class="input"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></label>
+                </div>
+                <label>Notas<textarea id="purchaseNotes" class="input" rows="2"></textarea></label>
+                <div class="purchase-total"><span>Total de la compra</span><strong id="purchaseTotal">$0</strong></div>
+                <button class="btn primary wide" type="submit">Guardar compra y actualizar stock</button>
+              </form>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><div><h2>Compras recientes</h2><p class="muted">Entradas registradas en inventario.</p></div></div>
+              <div id="purchasesTable" class="table-lite"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="view-cierre" class="view">
+          <div class="grid form-grid">
+            <article class="panel">
+              <div class="panel-head"><div><h2 id="cashFormTitle">Abrir caja</h2><p class="muted">Controla el efectivo inicial y concilia el cierre del día.</p></div></div>
+              <form id="cashSessionForm" class="stack">
+                <label id="openingCashLabel">Efectivo inicial<input id="openingCash" class="input" type="number" min="0" step="100" value="0" /></label>
+                <div id="closeCashFields" class="stack" hidden>
+                  <div id="cashExpectedSummary" class="mini-grid"></div>
+                  <label>Efectivo contado<input id="countedCash" class="input" type="number" min="0" step="100" /></label>
+                  <label>Observaciones<textarea id="cashNotes" class="input" rows="3" placeholder="Novedades, diferencias o pendientes…"></textarea></label>
+                </div>
+                <button id="btnSubmitCash" class="btn primary wide" type="submit">Abrir caja</button>
+              </form>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><div><h2>Resumen del turno</h2><p class="muted">Ventas y gastos registrados desde la apertura.</p></div></div>
+              <div id="cashReconciliation" class="stack"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="view-reportes" class="view">
+          <div class="grid two">
+            <article class="panel"><div class="panel-head"><h2>Rendimiento del mes</h2></div><div id="reportsSummary" class="mini-grid"></div></article>
+            <article class="panel"><div class="panel-head"><h2>Métodos de pago</h2></div><div id="paymentReport" class="table-lite"></div></article>
+          </div>
+          <article class="panel"><div class="panel-head"><h2>Productos más vendidos</h2></div><div id="productReport" class="table-lite"></div></article>
+        </section>
+
+        <section id="view-ventas" class="view">
+          <article class="panel">
+            <div class="panel-head">
+              <div><h2>Ventas</h2><p class="muted">Consulta ventas anteriores, filtra por fecha o anula un cobro.</p></div>
+              <div class="row compact">
+                <input id="salesFrom" class="input small" type="date" />
+                <input id="salesTo" class="input small" type="date" />
+                <button id="btnExportSalesCsv" class="btn secondary" type="button">Descargar informe</button>
+              </div>
+            </div>
+            <div id="salesSummary" class="mini-grid"></div>
+            <div id="salesTable" class="table-lite"></div>
+          </article>
+        </section>
+
+        <section id="view-clientes" class="view">
+          <div class="grid form-grid">
+            <article class="panel">
+              <div class="panel-head"><div><h2 id="customerFormTitle">Nuevo cliente</h2><p class="muted">Para fidelización, encargos y ventas recurrentes.</p></div></div>
+              <form id="customerForm" class="stack">
+                <input type="hidden" id="customerId" />
+                <label>Nombre<input id="customerName" class="input" required /></label>
+                <label>Teléfono / WhatsApp<input id="customerPhone" class="input" inputmode="tel" /></label>
+                <label>Correo electrónico<input id="customerEmail" class="input" type="email" /></label>
+                <label>Notas<textarea id="customerNotes" class="input" rows="3" placeholder="Preferencias, cumpleaños, pedidos frecuentes…"></textarea></label>
+                <div class="row">
+                  <button class="btn primary" type="submit">Guardar cliente</button>
+                  <button id="btnResetCustomer" class="btn ghost" type="button">Limpiar</button>
+                </div>
+              </form>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><div><h2>Clientes</h2><p class="muted">Compras, puntos y contacto.</p></div><input id="customersSearch" class="input small" placeholder="Buscar…" /></div>
+              <div id="customersTable" class="table-lite"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="view-gastos" class="view">
+          <div class="grid form-grid">
+            <article class="panel">
+              <div class="panel-head"><div><h2>Nuevo gasto</h2><p class="muted">Insumos, proveedores, servicios, transporte, lo que se va en sobrevivir.</p></div></div>
+              <form id="expenseForm" class="stack">
+                <div class="grid two tight">
+                  <label>Fecha<input id="expenseDate" class="input" type="date" required /></label>
+                  <label>Categoría<select id="expenseCategory" class="input"><option>Insumos</option><option>Servicios</option><option>Arriendo</option><option>Nómina</option><option>Transporte</option><option>Marketing</option><option>Mantenimiento</option><option>Otros</option></select></label>
+                  <label>Valor<input id="expenseAmount" class="input" type="number" min="0" step="100" required /></label>
+                  <label>Método<select id="expensePayment" class="input"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></label>
+                </div>
+                <label>Descripción<input id="expenseDescription" class="input" required placeholder="Compra de café, vasos, leche…" /></label>
+                <label>Proveedor<input id="expenseSupplier" class="input" placeholder="Opcional" /></label>
+                <label>Notas<textarea id="expenseNotes" class="input" rows="2"></textarea></label>
+                <button class="btn primary" type="submit">Guardar gasto</button>
+              </form>
+            </article>
+            <article class="panel">
+              <div class="panel-head">
+                <div><h2>Gastos registrados</h2><p class="muted">Consulta los gastos por fecha o descarga un informe.</p></div>
+                <div class="row compact"><input id="expensesFrom" class="input small" type="date" /><input id="expensesTo" class="input small" type="date" /><button id="btnExportExpensesCsv" class="btn secondary" type="button">Descargar informe</button></div>
+              </div>
+              <div id="expensesSummary" class="mini-grid"></div>
+              <div id="expensesTable" class="table-lite"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="view-config" class="view">
+          <div class="grid two">
+            <article class="panel">
+              <div class="panel-head"><div><h2>Datos de MusiCafé</h2><p class="muted">Define cómo se verá la información en ventas y comprobantes.</p></div></div>
+              <form id="settingsForm" class="stack">
+                <label>Nombre comercial<input id="settingCafeName" class="input" value="MusiCafé" /></label>
+                <label>IVA / impuesto (%)<input id="settingTaxRate" class="input" type="number" min="0" max="30" step="0.1" value="0" /></label>
+                <label>Moneda<input id="settingCurrency" class="input" value="COP" /></label>
+                <label>Mensaje del ticket<textarea id="settingTicketFooter" class="input" rows="2">Gracias por apoyar MusiCafé ☕</textarea></label>
+                <button class="btn primary" type="submit">Guardar cambios</button>
+              </form>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><div><h2>Copias de seguridad</h2><p class="muted">Guarda una copia de la información o recupera una copia anterior.</p></div></div>
+              <div class="stack">
+                <button id="btnExportJson2" class="btn secondary" type="button">Guardar copia de seguridad</button>
+                <button id="btnImportJson" class="btn ghost" type="button">Recuperar una copia anterior</button>
+                <input id="importJsonFile" type="file" accept="application/json" hidden />
+                <button id="btnWipeDraft" class="btn ghost" type="button">Borrar pedido en borrador</button>
+                <div class="hint">
+                  Solo las cuentas autorizadas de MusiCafé pueden consultar o modificar la información.
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Acciones principales">
+    <button type="button" data-go-view="dashboard">🏠<span>Hoy</span></button>
+    <button type="button" data-go-view="pos">🧾<span>Caja</span></button>
+    <button type="button" data-go-view="compras">🛒<span>Compra</span></button>
+    <button type="button" data-go-view="cierre">🔒<span>Cierre</span></button>
+  </nav>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>

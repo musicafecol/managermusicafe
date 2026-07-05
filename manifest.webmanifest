@@ -1,0 +1,17 @@
+{
+  "name": "MusiCafé Manager",
+  "short_name": "MusiCafé",
+  "description": "Sistema de trabajo para ventas, caja, inventario, clientes, gastos y reportes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff8f0",
+  "theme_color": "#6d4c41",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
