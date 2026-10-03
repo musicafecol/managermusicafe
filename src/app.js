@@ -26,12 +26,12 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyACaoRL50ee3bP5j-uhZ4-wIHln2fUsyJA',
-  authDomain: 'db-musicafe.firebaseapp.com',
-  projectId: 'db-musicafe',
-  storageBucket: 'db-musicafe.firebasestorage.app',
-  messagingSenderId: '742667534518',
-  appId: '1:742667534518:web:7db496423c662e99fde617'
+  apiKey: 'AIzaSyCLY3pdRWV5dZmzmoNzElpXohG60WBumKk',
+  authDomain: 'musicafe-4fff7.firebaseapp.com',
+  projectId: 'musicafe-4fff7',
+  storageBucket: 'musicafe-4fff7.firebasestorage.app',
+  messagingSenderId: '781609307444',
+  appId: '1:781609307444:web:c82cb4c6fa376048a82961'
 };
 
 const app = initializeApp(firebaseConfig);

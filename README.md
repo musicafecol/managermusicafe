@@ -104,7 +104,7 @@ cd musicafe-firestore-manager
 El proyecto ya trae `.firebaserc` apuntando a:
 
 ```txt
-db-musicafe
+musicafe-4fff7
 ```
 
 Si necesitas cambiarlo:
@@ -170,7 +170,7 @@ firebase deploy --only hosting,firestore:rules,firestore:indexes
 Después Firebase te mostrará una URL parecida a:
 
 ```txt
-https://db-musicafe.web.app
+https://musicafe-4fff7.web.app
 ```
 
 ## Primer uso dentro de la app
