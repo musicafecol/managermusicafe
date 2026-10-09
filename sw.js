@@ -1,4 +1,4 @@
-const CACHE_NAME = 'musicafe-shell-v4';
+const CACHE_NAME = 'musicafe-shell-v5';
 const ASSETS = ['./', './index.html', './styles.css', './src/app.js', './logo.png', './manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

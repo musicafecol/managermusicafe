@@ -335,3 +335,24 @@ label { display:grid; gap:6px; font-size:12px; color:var(--muted); font-weight:8
   .mobile-nav span { font-size:10px; }
   .product-card { min-height:120px; }
 }
+
+/* Máquina Philips */
+.machine-layout { grid-template-columns:minmax(0, 1.4fr) minmax(300px, .6fr); align-items:start; }
+.machine-rows { display:grid; gap:8px; }
+.machine-row { display:grid; grid-template-columns:minmax(0,1.2fr) 120px auto 80px; gap:10px; align-items:center; border:1px solid var(--line); border-radius:16px; padding:10px 12px; background:rgba(255,253,250,.65); }
+.machine-row.active { border-color:rgba(109,76,65,.35); background:rgba(109,76,65,.06); }
+.machine-row.warn { border-color:#d9534f; background:rgba(254,228,226,.6); }
+.machine-name strong { display:block; }
+.machine-name small, .machine-counter span, .machine-free > span { color:var(--muted); font-size:11px; }
+.machine-counter .input { font-size:18px; font-weight:900; text-align:center; }
+.machine-free b { min-width:22px; text-align:center; font-size:16px; }
+.machine-free .btn { min-height:34px; padding:4px 10px; }
+.machine-result { display:grid; text-align:right; font-size:12px; color:var(--muted); }
+.machine-result b { font-size:16px; color:var(--ink); }
+.machine-side { position:sticky; top:calc(var(--topbar) + 18px); }
+.machine-history-head { margin-top:12px; }
+@media (max-width: 900px) {
+  .machine-layout { grid-template-columns:1fr; }
+  .machine-row { grid-template-columns:minmax(0,1fr) 110px; }
+  .machine-side { position:static; }
+}

@@ -51,6 +51,7 @@ const DEFAULT_SETTINGS = {
 const VIEW_META = {
   dashboard: ['Día a día', 'Hoy en MusiCafé', 'Ventas, caja, inventario y pendientes del día.'],
   pos: ['Día a día', 'Caja', 'Agrega productos, confirma el método de pago y guarda la venta.'],
+  maquina: ['Día a día', 'Máquina Philips', 'Anota el contador de cada bebida y la app calcula cuántas se prepararon, cuántas fueron gratis y cuántas se pagaron.'],
   cierre: ['Día a día', 'Cierre de caja', 'Revisa ventas, pagos, gastos y efectivo antes de cerrar el día.'],
   productos: ['Productos', 'Productos', 'Organiza el catálogo, precios y disponibilidad en caja.'],
   inventario: ['Productos', 'Inventario', 'Controla entradas, salidas, ajustes y productos por reponer.'],
@@ -73,6 +74,22 @@ const DEMO_PRODUCTS = [
   { name: 'Combo café + postre', category: 'Combos', price: 13000, cost: 5200, stock: 999, minStock: 0, unit: 'combo', sku: 'COM-CAF', active: true, notes: 'Producto de combo, revisar stock manualmente.' }
 ];
 
+const MACHINE_DRINKS = [
+  ['espresso', 'Espresso'], ['cafe', 'Café'], ['americano', 'Americano'], ['cappuccino', 'Cappuccino'],
+  ['latteMacchiato', 'Latte Macchiato'], ['cafeHielo', 'Café con hielo'], ['latteHielo', 'Latte con hielo'],
+  ['cafeCrema', 'Café crema'], ['ristretto', 'Ristretto'], ['cafeLargo', 'Café largo'], ['cafeLeche', 'Café con leche'],
+  ['cafeLatte', 'Café latte'], ['flatWhite', 'Flat white'], ['tazaViaje', 'Taza de viaje'], ['lecheEspumada', 'Leche espumada'],
+  ['aguaCaliente', 'Agua caliente'], ['espressoHielo', 'Espresso con hielo'], ['americanoHielo', 'Americano con hielo'],
+  ['cafeCremaHielo', 'Café crema con hielo'], ['cappuccinoHielo', 'Cappuccino con hielo'],
+  ['cafeLecheHielo', 'Café con leche con hielo'], ['caffeLatteHielo', 'Caffe latte con hielo']
+];
+
+// Último recuento de la hoja "Máquina de café - Phillips" (3 y 4 de octubre de 2026), para arrancar con historial.
+const MACHINE_EXCEL_SEED = [
+  { dateKey: '2026-10-03', counters: [1, 23, 4, 10, 4, 2, 0, 1, 2, 1, 1, 1, 1, 0, 1, 5, 0, 0, 0, 1, 0, 0], free: [0, 3, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0] },
+  { dateKey: '2026-10-04', counters: [1, 30, 9, 13, 4, 2, 0, 2, 2, 1, 1, 1, 1, 0, 1, 7, 0, 0, 0, 1, 0, 0], free: [0, 3, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0] }
+];
+
 const state = {
   user: null,
   view: 'dashboard',
@@ -82,6 +99,8 @@ const state = {
   expenses: [],
   purchases: [],
   cashSessions: [],
+  machineCounts: [],
+  machineForm: { dateKey: '', counters: {}, free: {} },
   settings: { ...DEFAULT_SETTINGS },
   cart: [],
   unsubscribers: [],
@@ -296,6 +315,11 @@ async function initDataAfterLogin(user) {
     state.cashSessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     renderAll();
   }, 'cierres de caja');
+
+  subscribe(query(collection(db, 'machineCounts'), orderBy('dateKey', 'desc'), limit(400)), (snap) => {
+    state.machineCounts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderAll();
+  }, 'conteos de la máquina');
 
   await loadDraftCart();
   state.loaded = true;
@@ -827,7 +851,8 @@ function exportBackup() {
     products: state.products,
     customers: state.customers,
     sales: state.sales,
-    expenses: state.expenses
+    expenses: state.expenses,
+    machineCounts: state.machineCounts
   };
   downloadText(`musicafe-backup-${dateKeyFromDate()}.json`, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
 }
@@ -839,7 +864,7 @@ async function importBackup(file) {
     const data = JSON.parse(await file.text());
     const ops = [];
     if (data.settings) ops.push({ ref: doc(db, 'settings', 'cafe'), data: { ...data.settings, updatedAt: serverTimestamp() } });
-    ['products', 'customers', 'sales', 'expenses'].forEach((key) => {
+    ['products', 'customers', 'sales', 'expenses', 'machineCounts'].forEach((key) => {
       (Array.isArray(data[key]) ? data[key] : []).forEach(({ id, ...item }) => {
         const ref = id ? doc(db, key, id) : doc(collection(db, key));
         ops.push({ ref, data: { ...item, updatedAt: serverTimestamp() } });
@@ -904,6 +929,7 @@ function renderAll() {
   renderSales();
   renderExpenses();
   renderDashboard();
+  renderMachine();
   const last = $('#lastUpdate');
   if (last) last.textContent = `Información actualizada a las ${new Intl.DateTimeFormat('es-CO', { timeStyle: 'short' }).format(new Date())}`;
 }
@@ -1275,6 +1301,15 @@ function wireEvents() {
     $(`#${id}`)?.addEventListener('change', renderAll);
   });
 
+  $('#machineDate')?.addEventListener('change', () => renderMachine(true));
+  $('#btnSaveMachine')?.addEventListener('click', saveMachineCount);
+  $('#machineRows')?.addEventListener('input', (event) => {
+    const key = event.target.dataset.machineCounter;
+    if (!key) return;
+    state.machineForm.counters[key] = event.target.value;
+    renderMachine();
+  });
+
   $('#globalSearch')?.addEventListener('input', debounce((event) => {
     state.globalSearch = normalize(event.target.value);
     renderAll();
@@ -1313,14 +1348,144 @@ function wireEvents() {
     if (action === 'delete-customer') deleteCustomer(id).catch(() => toast('No pudimos eliminar el cliente. Inténtalo de nuevo.', 'error'));
     if (action === 'delete-expense') deleteExpense(id).catch(() => toast('No pudimos eliminar el gasto. Inténtalo de nuevo.', 'error'));
     if (action === 'void-sale') voidSale(id);
+    if (action === 'machine-free-inc' || action === 'machine-free-dec') {
+      state.machineForm.free[id] = Math.max(0, int(state.machineForm.free[id]) + (action === 'machine-free-inc' ? 1 : -1));
+      renderMachine();
+    }
+    if (action === 'machine-open') { $('#machineDate').value = id; renderMachine(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    if (action === 'machine-seed') seedMachineFromExcel().catch(() => toast('No pude cargar el recuento del Excel.', 'error'));
   });
+}
+
+// ---------- Máquina Philips: conteo diario por contador ----------
+function machinePrevious(dateKey) {
+  return state.machineCounts.find((c) => c.dateKey < dateKey) || null;
+}
+
+function machineDayStats(count, previous = machinePrevious(count?.dateKey || '')) {
+  const rows = MACHINE_DRINKS.map(([key, name]) => {
+    const reading = count?.counters?.[key];
+    const prev = previous?.counters?.[key];
+    const hasReading = reading !== undefined && reading !== null && reading !== '';
+    const made = hasReading && previous ? Math.max(0, int(reading) - int(prev)) : 0;
+    const free = Math.min(int(count?.free?.[key]), made);
+    return { key, name, reading: hasReading ? int(reading) : null, prev: previous ? int(prev) : null, made, free, paid: made - free };
+  });
+  const sum = (field) => rows.reduce((acc, r) => acc + r[field], 0);
+  return { rows, made: sum('made'), free: sum('free'), paid: sum('paid'), isBase: !previous };
+}
+
+function loadMachineForm(dateKey) {
+  const existing = state.machineCounts.find((c) => c.dateKey === dateKey);
+  state.machineForm = {
+    dateKey,
+    counters: { ...(existing?.counters || {}) },
+    free: { ...(existing?.free || {}) },
+    notes: existing?.notes || ''
+  };
+}
+
+function renderMachine(force = false) {
+  const host = $('#machineRows');
+  if (!host) return;
+  const dateKey = $('#machineDate')?.value || dateKeyFromDate();
+  if (force || state.machineForm.dateKey !== dateKey) {
+    loadMachineForm(dateKey);
+    if ($('#machineNotes')) $('#machineNotes').value = state.machineForm.notes;
+    host.dataset.built = '';
+  }
+  const previous = machinePrevious(dateKey);
+  const stats = machineDayStats(state.machineForm, previous);
+  const existing = state.machineCounts.find((c) => c.dateKey === dateKey);
+
+  if (!host.dataset.built) {
+    host.innerHTML = stats.rows.map((r) => `<div class="machine-row" data-drink="${r.key}">
+      <div class="machine-name"><strong>${escapeHtml(r.name)}</strong><small>Anterior: <b data-prev>${r.prev ?? '—'}</b></small></div>
+      <label class="machine-counter"><span>Contador hoy</span><input class="input" type="number" inputmode="numeric" min="0" step="1" data-machine-counter="${r.key}" value="${r.reading ?? ''}" placeholder="${r.prev ?? '0'}" /></label>
+      <div class="machine-free"><span>Gratis</span><div class="qty-row"><button class="btn ghost" type="button" data-action="machine-free-dec" data-id="${r.key}">−</button><b data-free>0</b><button class="btn ghost" type="button" data-action="machine-free-inc" data-id="${r.key}">+</button></div></div>
+      <div class="machine-result"><span data-made></span><span data-paid></span></div>
+    </div>`).join('');
+    host.dataset.built = '1';
+  }
+
+  stats.rows.forEach((r) => {
+    const row = host.querySelector(`[data-drink="${r.key}"]`);
+    if (!row) return;
+    row.querySelector('[data-prev]').textContent = r.prev ?? '—';
+    row.querySelector('[data-free]').textContent = String(int(state.machineForm.free[r.key]));
+    row.querySelector('[data-made]').textContent = stats.isBase ? 'Base' : `${r.made} hechas`;
+    row.querySelector('[data-paid]').innerHTML = stats.isBase ? '' : `<b>${r.paid}</b> pagas`;
+    row.classList.toggle('warn', r.reading !== null && r.prev !== null && r.reading < r.prev);
+    row.classList.toggle('active', r.made > 0);
+  });
+
+  if ($('#machineSummary')) {
+    $('#machineSummary').innerHTML = stats.isBase
+      ? '<div class="hint">Este es el primer conteo: queda como punto de partida. Desde el siguiente día la app calcula las bebidas.</div>'
+      : `<div class="mini-grid"><div><span>Preparadas</span><strong>${stats.made}</strong></div><div><span>Gratis</span><strong>${stats.free}</strong></div><div><span>Pagas</span><strong>${stats.paid}</strong></div></div>
+         <p class="tiny muted">Comparado con el conteo del ${escapeHtml(previous.dateKey)}.${existing ? ' Este día ya está guardado; puedes corregirlo.' : ''}</p>`;
+  }
+  if ($('#btnSaveMachine')) $('#btnSaveMachine').textContent = existing ? 'Actualizar conteo' : 'Guardar conteo del día';
+
+  const history = $('#machineHistory');
+  if (history) {
+    history.innerHTML = state.machineCounts.length ? state.machineCounts.slice(0, 30).map((c) => {
+      const s = machineDayStats(c);
+      const top = s.rows.filter((r) => r.made > 0).sort((a, b) => b.made - a.made).slice(0, 3).map((r) => `${r.name} ${r.made}`).join(' · ');
+      return `<div class="table-row"><div><div class="title">${escapeHtml(c.dateKey)}</div><div class="sub">${s.isBase ? 'Conteo base' : escapeHtml(top || 'Sin bebidas')}</div></div>
+        <div class="table-actions">${s.isBase ? '' : `<span class="badge ok">${s.paid} pagas</span><span class="badge warn">${s.free} gratis</span>`}<button class="btn ghost" type="button" data-action="machine-open" data-id="${escapeHtml(c.dateKey)}">Ver</button></div></div>`;
+    }).join('') : '<div class="empty-state">Aún no hay conteos.<br /><button class="btn secondary" type="button" data-action="machine-seed">Cargar el recuento del Excel (3 y 4 de octubre)</button></div>';
+  }
+}
+
+async function saveMachineCount() {
+  const form = state.machineForm;
+  const previous = machinePrevious(form.dateKey);
+  const counters = {};
+  MACHINE_DRINKS.forEach(([key]) => {
+    const v = form.counters[key];
+    // Si no se escribe nada, se asume que el contador no cambió.
+    counters[key] = v === undefined || v === '' ? int(previous?.counters?.[key]) : int(v);
+  });
+  const lower = MACHINE_DRINKS.filter(([key]) => previous && counters[key] < int(previous.counters?.[key]));
+  if (lower.length && !confirm(`El contador quedó menor que el anterior en: ${lower.map(([, n]) => n).join(', ')}. ¿Guardar de todas formas?`)) return;
+  const stats = machineDayStats({ dateKey: form.dateKey, counters, free: form.free }, previous);
+  const free = Object.fromEntries(stats.rows.map((r) => [r.key, r.free]));
+  try {
+    await setDoc(doc(db, 'machineCounts', form.dateKey), {
+      dateKey: form.dateKey,
+      monthKey: form.dateKey.slice(0, 7),
+      counters,
+      free,
+      totals: { made: stats.made, free: stats.free, paid: stats.paid },
+      notes: $('#machineNotes')?.value.trim() || '',
+      updatedAt: serverTimestamp(),
+      updatedBy: state.user?.email || ''
+    }, { merge: true });
+    toast(stats.isBase ? 'Conteo base guardado.' : `Conteo guardado: ${stats.made} bebidas, ${stats.paid} pagas.`);
+  } catch (err) {
+    console.error(err);
+    toast('No pude guardar el conteo de la máquina.', 'error');
+  }
+}
+
+async function seedMachineFromExcel() {
+  const batch = writeBatch(db);
+  MACHINE_EXCEL_SEED.forEach((day) => {
+    const counters = Object.fromEntries(MACHINE_DRINKS.map(([key], i) => [key, day.counters[i]]));
+    const free = Object.fromEntries(MACHINE_DRINKS.map(([key], i) => [key, day.free[i]]));
+    batch.set(doc(db, 'machineCounts', day.dateKey), { dateKey: day.dateKey, monthKey: day.dateKey.slice(0, 7), counters, free, notes: 'Importado del Excel', updatedAt: serverTimestamp(), updatedBy: state.user?.email || '' });
+  });
+  await batch.commit();
+  toast('Recuento del Excel cargado.');
+  renderMachine(true);
 }
 
 function setInitialDates() {
   const today = dateKeyFromDate();
   const firstMonthDay = dateKeyFromDate(new Date(now().getFullYear(), now().getMonth(), 1));
   ['salesFrom', 'expensesFrom'].forEach((id) => { const el = $(`#${id}`); if (el) el.value = firstMonthDay; });
-  ['salesTo', 'expensesTo', 'expenseDate', 'purchaseDate'].forEach((id) => { const el = $(`#${id}`); if (el) el.value = today; });
+  ['salesTo', 'expensesTo', 'expenseDate', 'purchaseDate', 'machineDate'].forEach((id) => { const el = $(`#${id}`); if (el) el.value = today; });
 }
 
 function boot() {

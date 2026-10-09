@@ -54,6 +54,7 @@
           <span>Día a día</span>
           <button class="nav-btn active" type="button" data-view="dashboard">🏠 Hoy</button>
           <button class="nav-btn" type="button" data-view="pos">🧾 Caja</button>
+          <button class="nav-btn" type="button" data-view="maquina">☕ Máquina</button>
           <button class="nav-btn" type="button" data-view="cierre">🔒 Cierre</button>
         </div>
         <div class="sidebar-section">
@@ -279,6 +280,26 @@
           </div>
         </section>
 
+        <section id="view-maquina" class="view">
+          <div class="grid form-grid machine-layout">
+            <article class="panel">
+              <div class="panel-head">
+                <div><h2>Conteo del día</h2><p class="muted">Copia el número que muestra la Philips 5500 en cada bebida. Si una no cambió, déjala vacía. Marca con + las que fueron gratis.</p></div>
+                <input id="machineDate" class="input small" type="date" />
+              </div>
+              <div id="machineRows" class="machine-rows"></div>
+            </article>
+            <aside class="panel machine-side">
+              <div class="panel-head"><div><h2>Resultado</h2><p class="muted">Se calcula restando el contador anterior.</p></div></div>
+              <div id="machineSummary" class="stack"></div>
+              <label>Notas<textarea id="machineNotes" class="input" rows="2" placeholder="Limpieza, cortesías, fallas…"></textarea></label>
+              <button id="btnSaveMachine" class="btn primary wide" type="button">Guardar conteo del día</button>
+              <div class="panel-head machine-history-head"><h2>Historial</h2></div>
+              <div id="machineHistory" class="table-lite"></div>
+            </aside>
+          </div>
+        </section>
+
         <section id="view-cierre" class="view">
           <div class="grid form-grid">
             <article class="panel">
@@ -407,7 +428,7 @@
   <nav class="mobile-nav" aria-label="Acciones principales">
     <button type="button" data-go-view="dashboard">🏠<span>Hoy</span></button>
     <button type="button" data-go-view="pos">🧾<span>Caja</span></button>
-    <button type="button" data-go-view="compras">🛒<span>Compra</span></button>
+    <button type="button" data-go-view="maquina">☕<span>Máquina</span></button>
     <button type="button" data-go-view="cierre">🔒<span>Cierre</span></button>
   </nav>
 
